@@ -94,7 +94,7 @@ mixin _ExecMixin on _Melos {
     Map<String, String> additionalEnvironment = const {},
   }) async {
     final failures = <String, int?>{};
-    final pool = Pool(concurrency);
+    final pool = Pool(concurrency, timeout: const Duration(seconds: 60));
     final execArgsString = execArgs.join(' ');
     final prefixLogs = concurrency != 1 && packages.length != 1;
 
@@ -157,6 +157,8 @@ mixin _ExecMixin on _Melos {
           extraEnvironment: additionalEnvironment,
         );
 
+        logger.stdout('[${package.name}] ExitCode: $packageExitCode');
+
         packageResults[package.name]?.complete(packageExitCode);
 
         if (packageExitCode > 0) {
@@ -174,7 +176,11 @@ mixin _ExecMixin on _Melos {
       }).drain<void>(),
     );
 
+    logger.stdout('--- before valueOrCancellation');
+
     await operation.valueOrCancellation();
+
+    logger.stdout('--- after valueOrCancellation');
 
     if (failFast) {
       runningPids.forEach(Process.killPid);
